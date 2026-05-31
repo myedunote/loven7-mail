@@ -117,7 +117,7 @@ export function Sidebar({ activeMenu, setActiveMenu, stats, theme, setTheme, loc
             <button onClick={() => setActiveMenu('settings')} className="sidebar-mini-btn" title={locale === 'en-US' ? 'Settings' : '系统设置'}><Settings size={15} />{locale === 'en-US' ? 'Settings' : '设置'}</button>
             {children}
           </div>
-          <div className="mt-3 flex rounded-xl bg-slate-100 p-1"><button onClick={() => setTheme('light')} className={cls('flex flex-1 items-center justify-center gap-2 rounded-lg py-2 text-sm', theme === 'light' ? 'bg-white font-medium shadow-sm' : 'text-slate-500')}><Sun size={16} /> {locale === 'en-US' ? 'Light' : '浅色'}</button><button onClick={() => setTheme('dark')} className={cls('flex flex-1 items-center justify-center gap-2 rounded-lg py-2 text-sm', theme === 'dark' ? 'bg-white font-medium shadow-sm' : 'text-slate-500')}><Moon size={16} /> {locale === 'en-US' ? 'Dark' : '深色'}</button></div>
+          <div className="theme-segmented-control mt-3"><button onClick={() => setTheme('light')} className={cls('theme-segmented-option', theme === 'light' ? 'active' : 'text-slate-500')}><Sun size={16} /> {locale === 'en-US' ? 'Light' : '浅色'}</button><button onClick={() => setTheme('dark')} className={cls('theme-segmented-option', theme === 'dark' ? 'active' : 'text-slate-500')}><Moon size={16} /> {locale === 'en-US' ? 'Dark' : '深色'}</button></div>
           <button type="button" className="locale-mode-toggle mt-2 w-full" title={localeToggleTitle(locale)} onClick={() => setLocale(toggleLocale(locale))}>
             <span>{locale === 'en-US' ? 'Language' : '界面语言'}</span>
             <strong>{locale === 'en-US' ? 'English' : '中文'}</strong>
