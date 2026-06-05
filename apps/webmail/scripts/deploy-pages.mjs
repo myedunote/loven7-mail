@@ -11,6 +11,15 @@ const projectName = (process.env.WEBMAIL_PAGES_PROJECT_NAME || 'loven7-mail-webm
 const branch = (process.env.CF_PAGES_BRANCH || process.env.GITHUB_REF_NAME || 'main').trim();
 const useLocalWranglerConfig = process.env.WEBMAIL_USE_LOCAL_WRANGLER_CONFIG === '1';
 
+if (!process.env.WEBMAIL_PAGES_PROJECT_NAME) {
+  console.warn('WEBMAIL_PAGES_PROJECT_NAME is not set; using default project loven7-mail-webmail.');
+  console.warn('If you are reusing an existing Cloudflare Pages project, set WEBMAIL_PAGES_PROJECT_NAME explicitly before deploy.');
+}
+if (branch !== 'main' && branch !== 'production' && process.env.WEBMAIL_PREVIEW_RUNTIME_CONFIRMED !== '1') {
+  console.warn(`Deploying branch "${branch}" as a Cloudflare Pages preview environment.`);
+  console.warn('Preview variables, secrets, and KV bindings are independent from production. Confirm MAIL_WORKER_BASE_URL, SHARE_ENCRYPTION_SECRET, SHARE_ADMIN_CORS_ORIGINS, and SHARE_KV before testing full Webmail features.');
+}
+
 if (!projectName) {
   console.error('WEBMAIL_PAGES_PROJECT_NAME is empty. Set it or use the default loven7-mail-webmail project.');
   process.exit(1);
@@ -24,6 +33,8 @@ if (!/^[a-z0-9._/-]+$/i.test(branch)) {
   process.exit(1);
 }
 
+console.log(`Deploy target: project=${projectName}, branch=${branch}, environment=${branch === 'main' || branch === 'production' ? 'production' : 'preview'}`);
+
 const wranglerConfigPath = resolve('wrangler.toml');
 const ignoredConfigPath = resolve(`wrangler.toml.deploy-ignore-${process.pid}`);
 let configTemporarilyMoved = false;
@@ -31,8 +42,8 @@ let configTemporarilyMoved = false;
 const isWindows = process.platform === 'win32';
 const command = isWindows ? 'cmd.exe' : 'npx';
 const args = isWindows
-  ? ['/d', '/s', '/c', `npx wrangler pages deploy dist --project-name ${projectName} --branch ${branch}`]
-  : ['wrangler', 'pages', 'deploy', 'dist', '--project-name', projectName, '--branch', branch];
+  ? ['/d', '/s', '/c', `npx --yes wrangler@latest pages deploy dist --project-name ${projectName} --branch ${branch}`]
+  : ['--yes', 'wrangler@latest', 'pages', 'deploy', 'dist', '--project-name', projectName, '--branch', branch];
 
 try {
   if (!useLocalWranglerConfig && existsSync(wranglerConfigPath)) {

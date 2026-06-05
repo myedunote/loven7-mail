@@ -423,7 +423,11 @@ npm run build
 | `MAIL_WORKER_BASE_URL` | 必需 | 官方 Temp Mail Worker/API 根地址 |
 | `SITE_PASSWORD` | 可选 | 如果官方 Worker 开启站点密码 |
 | `SHARE_ENCRYPTION_SECRET` | 分享功能必需 | 加密 KV 中的分享记录 |
+| `SHARE_ADMIN_CORS_ORIGINS` | 分站管理分享时必需 | 允许跨源调用分享管理接口的后台 origin，逗号分隔；不要设置 `*` |
+| `SHARE_PUBLIC_CORS_ORIGINS` | 可选 | 公开分享 API 的额外跨源来源；正常同源分享页留空 |
 | `SHARE_KV` | 分享功能必需 | 保存分享记录、summary 索引、撤回状态和隐藏邮件 |
+
+后台与用户站按推荐方式部署成两个 Cloudflare Pages 项目时，`SHARE_ADMIN_CORS_ORIGINS` 必须配置在**用户站 Pages 项目**上，值是管理后台页面 origin。
 
 ### 通用 HTTP 工具
 
@@ -578,6 +582,9 @@ WEBMAIL_PAGES_PROJECT_NAME
 ```bash
 npm --prefix apps/admin run lint
 npm --prefix apps/admin run build
+npm --prefix apps/webmail run check:functions:headers
+npm --prefix apps/webmail run check:functions:cors
+npm --prefix apps/webmail run check:functions:image
 npm --prefix apps/webmail run build
 ```
 

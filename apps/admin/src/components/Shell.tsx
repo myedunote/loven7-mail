@@ -1,5 +1,6 @@
 import React, { useEffect, useMemo, useRef, useState } from 'react';
-import { AlertCircle, BarChart2, ChevronDown, Inbox, LayoutDashboard, Moon, MoreHorizontal, PenLine, RefreshCw, Send, Settings, Shield, Sun, UserRoundCog, Users, Database } from 'lucide-react';
+import { AlertCircle, BarChart2, Check, ChevronDown, Database, ExternalLink, Inbox, LayoutDashboard, Moon, MoreHorizontal, PenLine, RefreshCw, RotateCcw, Send, Settings, Shield, Sun, UserRoundCog, Users } from 'lucide-react';
+import { STORAGE_KEYS } from '../lib/constants';
 import { cls } from '../lib/format';
 import { getLocaleShortLabel, getRuntimeLocale, localeText, toggleLocale, type AppLocale } from '../lib/locale';
 import type { Statistics } from '../types/api';
@@ -27,6 +28,109 @@ const menuGroups: Array<Array<{ key: MenuKey; label: string; icon: React.Compone
 ];
 
 const flatMenuItems = menuGroups.flat();
+
+const adminAvatarPresets = [
+  { id: 'aurora', src: 'https://img.loven7.com/file/img/IRup4u1h.webp', labelZh: '蓝发男工程师', labelEn: 'Blue male engineer' },
+  { id: 'mint', src: 'https://img.loven7.com/file/img/AuYlfVVC.webp', labelZh: '绿衣男管理员', labelEn: 'Sage male admin' },
+  { id: 'coral', src: 'https://img.loven7.com/file/img/UtZxQsag.webp', labelZh: '珊瑚女指挥官', labelEn: 'Coral female lead' },
+  { id: 'plum', src: 'https://img.loven7.com/file/img/P1oQEWCG.webp', labelZh: '紫发女设计师', labelEn: 'Plum female designer' },
+  { id: 'skyline', src: 'https://img.loven7.com/file/img/8wVBfPFn.webp', labelZh: '银发男分析师', labelEn: 'Silver male analyst' },
+] as const;
+
+type AdminAvatarPresetId = (typeof adminAvatarPresets)[number]['id'];
+type AdminAvatarChoice = AdminAvatarPresetId | 'custom';
+
+const DEFAULT_ADMIN_AVATAR: AdminAvatarPresetId = 'aurora';
+const AVATAR_IMAGE_HOST_ORIGIN = 'https://img.loven7.com';
+const AVATAR_IMAGE_HOSTNAME = 'img.loven7.com';
+const PROFILE_NAME_MAX_LENGTH = 24;
+
+function isAdminAvatarPresetId(value: string | null): value is AdminAvatarPresetId {
+  return adminAvatarPresets.some((preset) => preset.id === value);
+}
+
+function readStoredAvatarChoice(): AdminAvatarChoice {
+  if (typeof window === 'undefined') return DEFAULT_ADMIN_AVATAR;
+  try {
+    const stored = window.localStorage.getItem(STORAGE_KEYS.adminAvatarPreset);
+    if (stored === 'custom') return 'custom';
+    return isAdminAvatarPresetId(stored) ? stored : DEFAULT_ADMIN_AVATAR;
+  } catch {
+    return DEFAULT_ADMIN_AVATAR;
+  }
+}
+
+function extractAvatarUrl(value: string) {
+  const trimmed = value.trim();
+  const match = trimmed.match(/https?:\/\/[^\s<>"']+/i);
+  return (match?.[0] || trimmed).replace(/[)\],，。]+$/, '');
+}
+
+function normalizeAvatarUrl(value: string) {
+  const candidate = extractAvatarUrl(value);
+  if (!candidate) return '';
+  try {
+    const parsed = new URL(candidate);
+    if (parsed.protocol !== 'https:' || parsed.hostname !== AVATAR_IMAGE_HOSTNAME) return '';
+    return parsed.href;
+  } catch {
+    return '';
+  }
+}
+
+function readStoredCustomAvatar() {
+  if (typeof window === 'undefined') return '';
+  try {
+    const stored = window.localStorage.getItem(STORAGE_KEYS.adminAvatarCustom) || '';
+    const normalized = normalizeAvatarUrl(stored);
+    if (stored && !normalized) window.localStorage.removeItem(STORAGE_KEYS.adminAvatarCustom);
+    return normalized;
+  } catch {
+    return '';
+  }
+}
+
+function persistAvatarChoice(choice: AdminAvatarChoice) {
+  if (typeof window === 'undefined') return;
+  try {
+    window.localStorage.setItem(STORAGE_KEYS.adminAvatarPreset, choice);
+  } catch {
+    // Local storage can be unavailable in strict browser privacy modes.
+  }
+}
+
+function persistCustomAvatar(url: string) {
+  if (typeof window === 'undefined') return;
+  try {
+    if (url) window.localStorage.setItem(STORAGE_KEYS.adminAvatarCustom, url);
+    else window.localStorage.removeItem(STORAGE_KEYS.adminAvatarCustom);
+  } catch {
+    // Local storage can be unavailable in strict browser privacy modes.
+  }
+}
+
+function normalizeProfileName(value: string) {
+  return value.trim().replace(/\s+/g, ' ').slice(0, PROFILE_NAME_MAX_LENGTH);
+}
+
+function readStoredProfileName() {
+  if (typeof window === 'undefined') return '';
+  try {
+    return normalizeProfileName(window.localStorage.getItem(STORAGE_KEYS.adminProfileName) || '');
+  } catch {
+    return '';
+  }
+}
+
+function persistProfileName(name: string) {
+  if (typeof window === 'undefined') return;
+  try {
+    if (name) window.localStorage.setItem(STORAGE_KEYS.adminProfileName, name);
+    else window.localStorage.removeItem(STORAGE_KEYS.adminProfileName);
+  } catch {
+    // Local storage can be unavailable in strict browser privacy modes.
+  }
+}
 
 const menuLabelsEn: Partial<Record<MenuKey, string>> = {
   dashboard: 'Dashboard',
@@ -91,6 +195,73 @@ export function Sidebar({ activeMenu, setActiveMenu, stats, theme, setTheme, loc
 }) {
   const hostLabel = getApiHostLabel(apiBase, locale);
   const profileInitial = getProfileInitial(apiBase);
+  const profileCardRef = useRef<HTMLDivElement | null>(null);
+  const [avatarPickerOpen, setAvatarPickerOpen] = useState(false);
+  const [avatarChoice, setAvatarChoice] = useState<AdminAvatarChoice>(() => readStoredAvatarChoice());
+  const [customAvatar, setCustomAvatar] = useState(() => readStoredCustomAvatar());
+  const [avatarUrlDraft, setAvatarUrlDraft] = useState(() => readStoredCustomAvatar());
+  const [profileName, setProfileName] = useState(() => readStoredProfileName());
+  const [profileNameDraft, setProfileNameDraft] = useState(() => readStoredProfileName());
+  const [avatarNotice, setAvatarNotice] = useState('');
+  const selectedPreset = adminAvatarPresets.find((preset) => preset.id === avatarChoice) || adminAvatarPresets[0];
+  const isCustomAvatarActive = avatarChoice === 'custom' && !!customAvatar;
+  const avatarSrc = isCustomAvatarActive ? customAvatar : selectedPreset.src;
+  const defaultProfileName = locale === 'en-US' ? 'Admin' : '管理员';
+  const displayProfileName = profileName || defaultProfileName;
+
+  useEffect(() => {
+    if (!avatarPickerOpen) return undefined;
+    const onPointerDown = (event: PointerEvent) => {
+      if (profileCardRef.current && !profileCardRef.current.contains(event.target as Node)) setAvatarPickerOpen(false);
+    };
+    const onKeyDown = (event: KeyboardEvent) => {
+      if (event.key === 'Escape') setAvatarPickerOpen(false);
+    };
+    document.addEventListener('pointerdown', onPointerDown);
+    document.addEventListener('keydown', onKeyDown);
+    return () => {
+      document.removeEventListener('pointerdown', onPointerDown);
+      document.removeEventListener('keydown', onKeyDown);
+    };
+  }, [avatarPickerOpen]);
+
+  const chooseAvatar = (choice: AdminAvatarChoice) => {
+    if (choice === 'custom' && !customAvatar) return;
+    setAvatarChoice(choice);
+    persistAvatarChoice(choice);
+    setAvatarNotice(locale === 'en-US' ? 'Avatar saved' : '头像已保存');
+  };
+
+  const resetAvatar = () => {
+    chooseAvatar(DEFAULT_ADMIN_AVATAR);
+  };
+
+  const applyAvatarUrl = () => {
+    const normalized = normalizeAvatarUrl(avatarUrlDraft);
+    if (!normalized) {
+      setAvatarNotice(locale === 'en-US' ? 'Use an img.loven7.com HTTPS link' : '请填写 img.loven7.com 的 HTTPS 图床链接');
+      return;
+    }
+    setCustomAvatar(normalized);
+    setAvatarUrlDraft(normalized);
+    persistCustomAvatar(normalized);
+    setAvatarChoice('custom');
+    persistAvatarChoice('custom');
+    setAvatarNotice(locale === 'en-US' ? 'Image-host avatar applied' : '图床头像已应用');
+  };
+
+  const openImageHost = () => {
+    window.open(AVATAR_IMAGE_HOST_ORIGIN, '_blank', 'noopener,noreferrer');
+  };
+
+  const applyProfileName = () => {
+    const normalized = normalizeProfileName(profileNameDraft);
+    setProfileName(normalized);
+    setProfileNameDraft(normalized);
+    persistProfileName(normalized);
+    setAvatarNotice(normalized ? (locale === 'en-US' ? 'Profile name saved' : '名称已保存') : (locale === 'en-US' ? 'Default name restored' : '已恢复默认名称'));
+  };
+
   return (
     <aside className="hidden h-full w-[272px] shrink-0 flex-col border-r border-slate-100 bg-[#F8FAFC] md:flex xl:w-[288px]">
       <div className="flex items-center gap-3 px-6 py-8"><Logo /><div><h1 className="brand-wordmark text-xl font-semibold text-slate-950">Loven7-Mail</h1><p className="text-xs text-slate-400">{locale === 'en-US' ? 'Cloudflare temp mail admin' : 'Cloudflare 临时邮箱后台'}</p></div></div>
@@ -103,15 +274,89 @@ export function Sidebar({ activeMenu, setActiveMenu, stats, theme, setTheme, loc
       </div>
       <div className="p-4">
         <button onClick={() => setActiveMenu('compose')} className="sidebar-compose-btn mb-4 flex w-full items-center justify-center gap-2 rounded-2xl py-3.5 font-medium transition"><PenLine size={18} /> {locale === 'en-US' ? 'Compose' : '写邮件'}</button>
-        <div className="rounded-2xl bg-white p-3 shadow-sm">
-          <div className="admin-profile-row flex items-center gap-3">
-            <div className={cls('admin-profile-avatar flex h-10 w-10 items-center justify-center rounded-full font-semibold', connected ? 'is-connected' : 'is-disconnected')}>{profileInitial}</div>
-            <div className="min-w-0">
-              <p className="text-sm font-medium text-slate-800">{locale === 'en-US' ? 'Admin' : '管理员'}</p>
-              <p className="admin-profile-status truncate text-[11px] text-slate-400">{connected ? (locale === 'en-US' ? 'Connected' : '已连接') : (locale === 'en-US' ? 'Offline' : '未连接')} · {hostLabel}</p>
+        <div ref={profileCardRef} className="admin-profile-card rounded-2xl bg-white p-3 shadow-sm">
+          <button type="button" className={cls('admin-profile-row flex items-center gap-3', avatarPickerOpen && 'is-open')} onClick={() => setAvatarPickerOpen((current) => !current)} aria-haspopup="dialog" aria-expanded={avatarPickerOpen}>
+            <span className={cls('admin-profile-avatar flex h-10 w-10 items-center justify-center rounded-full font-semibold', !isCustomAvatarActive && 'admin-profile-avatar-preset')}>
+              <img src={avatarSrc} alt="" draggable={false} />
+              <span className="sr-only">{profileInitial}</span>
+            </span>
+            <span className="admin-profile-main min-w-0">
+              <span className="admin-profile-name text-sm font-medium text-slate-800">{displayProfileName}</span>
+              <span className="admin-profile-status truncate text-[11px] text-slate-400">{connected ? (locale === 'en-US' ? 'Connected' : '已连接') : (locale === 'en-US' ? 'Offline' : '未连接')} · {hostLabel}</span>
+            </span>
+            <ChevronDown size={16} className="admin-profile-chevron ml-auto text-slate-400" />
+          </button>
+          {avatarPickerOpen && (
+            <div className="admin-avatar-popover" role="dialog" aria-label={locale === 'en-US' ? 'Choose avatar' : '选择头像'}>
+              <div className="admin-avatar-popover-head">
+                <span>{locale === 'en-US' ? 'Avatar' : '头像'}</span>
+                <small>{locale === 'en-US' ? 'Presets or image-host link' : '预设或图床链接'}</small>
+              </div>
+              <label className="admin-profile-name-block" htmlFor="admin-profile-name">
+                <span>{locale === 'en-US' ? 'Display name' : '显示名称'}</span>
+                <span className="admin-profile-name-row">
+                  <input
+                    id="admin-profile-name"
+                    className="admin-profile-name-input"
+                    value={profileNameDraft}
+                    maxLength={PROFILE_NAME_MAX_LENGTH}
+                    placeholder={defaultProfileName}
+                    spellCheck={false}
+                    onChange={(event) => setProfileNameDraft(event.target.value)}
+                    onKeyDown={(event) => {
+                      if (event.key === 'Enter') {
+                        event.preventDefault();
+                        applyProfileName();
+                      }
+                    }}
+                  />
+                  <button type="button" className="admin-profile-name-apply" onClick={applyProfileName}><Check size={14} />{locale === 'en-US' ? 'Save' : '保存'}</button>
+                </span>
+              </label>
+              <div className="admin-avatar-grid">
+                {adminAvatarPresets.map((preset) => {
+                  const active = avatarChoice !== 'custom' && avatarChoice === preset.id;
+                  return (
+                    <button key={preset.id} type="button" className={cls('admin-avatar-option admin-avatar-preset-option', active && 'active')} title={locale === 'en-US' ? preset.labelEn : preset.labelZh} aria-label={locale === 'en-US' ? preset.labelEn : preset.labelZh} onClick={() => chooseAvatar(preset.id)}>
+                      <img src={preset.src} alt="" draggable={false} />
+                      {active && <span className="admin-avatar-check"><Check size={10} /></span>}
+                    </button>
+                  );
+                })}
+                {customAvatar && (
+                  <button type="button" className={cls('admin-avatar-option admin-avatar-custom-option', avatarChoice === 'custom' && 'active')} title={locale === 'en-US' ? 'Custom avatar' : '自定义头像'} aria-label={locale === 'en-US' ? 'Custom avatar' : '自定义头像'} onClick={() => chooseAvatar('custom')}>
+                    <img src={customAvatar} alt="" draggable={false} />
+                    {avatarChoice === 'custom' && <span className="admin-avatar-check"><Check size={10} /></span>}
+                  </button>
+                )}
+              </div>
+              <label className="admin-avatar-url-block" htmlFor="admin-avatar-url">
+                <span>{locale === 'en-US' ? 'Image-host link' : '图床链接'}</span>
+                <span className="admin-avatar-url-row">
+                  <input
+                    id="admin-avatar-url"
+                    className="admin-avatar-url-input"
+                    value={avatarUrlDraft}
+                    placeholder={`${AVATAR_IMAGE_HOST_ORIGIN}/file/...`}
+                    spellCheck={false}
+                    onChange={(event) => setAvatarUrlDraft(event.target.value)}
+                    onKeyDown={(event) => {
+                      if (event.key === 'Enter') {
+                        event.preventDefault();
+                        applyAvatarUrl();
+                      }
+                    }}
+                  />
+                  <button type="button" className="admin-avatar-url-apply" onClick={applyAvatarUrl}><Check size={14} />{locale === 'en-US' ? 'Apply' : '应用'}</button>
+                </span>
+              </label>
+              <div className="admin-avatar-actions">
+                <button type="button" className="admin-avatar-action" onClick={openImageHost}><ExternalLink size={15} />{locale === 'en-US' ? 'Image host' : '图床'}</button>
+                <button type="button" className="admin-avatar-action" onClick={resetAvatar}><RotateCcw size={15} />{locale === 'en-US' ? 'Reset' : '默认'}</button>
+              </div>
+              {avatarNotice && <p className="admin-avatar-notice">{avatarNotice}</p>}
             </div>
-            <ChevronDown size={16} className="ml-auto text-slate-400" />
-          </div>
+          )}
           <div className="mt-4 grid grid-cols-3 gap-2">
             <button onClick={refresh} className="sidebar-mini-btn" title={locale === 'en-US' ? 'Refresh' : '刷新'}><RefreshCw size={15} />{locale === 'en-US' ? 'Refresh' : '刷新'}</button>
             <button onClick={() => setActiveMenu('settings')} className="sidebar-mini-btn" title={locale === 'en-US' ? 'Settings' : '系统设置'}><Settings size={15} />{locale === 'en-US' ? 'Settings' : '设置'}</button>
@@ -129,26 +374,12 @@ export function Sidebar({ activeMenu, setActiveMenu, stats, theme, setTheme, loc
   );
 }
 
-export function Header({ activeMenu, apiBase, locale, setLocale, children }: {
-  activeMenu: MenuKey; setActiveMenu: (menu: MenuKey) => void; query: string; setQuery: (query: string) => void; refresh: () => void; apiBase: string; locale: AppLocale; setLocale: (locale: AppLocale) => void; children?: React.ReactNode;
+export function Header({ activeMenu, apiBase, locale }: {
+  activeMenu: MenuKey; setActiveMenu: (menu: MenuKey) => void; query: string; setQuery: (query: string) => void; refresh: () => void; apiBase: string; locale: AppLocale;
 }) {
   const titleMap: Record<MenuKey, string> = { dashboard: '仪表盘', stats: '统计', address: '地址管理', users: '用户管理', inbox: '收件箱', sent: '发件箱', unknown: '未知邮件', compose: '写邮件', settings: '系统设置', maintenance: '维护' };
   const activeLabel = locale === 'en-US' ? menuLabelsEn[activeMenu] || titleMap[activeMenu] : titleMap[activeMenu];
-  return (
-    <div className="mobile-header flex h-12 w-full items-center justify-between px-3 md:hidden">
-      <div className="flex min-w-0 items-center gap-2.5">
-        <div className="mobile-logo-tile flex h-8 w-8 shrink-0 items-center justify-center" aria-hidden="true"><BrandGlyph className="h-[24px] w-[24px]" /></div>
-        <div className="min-w-0">
-          <span className="brand-wordmark block truncate text-[15px] font-semibold leading-4 text-slate-950">Loven7-Mail</span>
-          <span className="block truncate text-[10px] leading-4 text-slate-400">{activeLabel} · {apiBase || (locale === 'en-US' ? 'Same-origin Worker' : '同源 Worker')}</span>
-        </div>
-      </div>
-      <div className="mobile-credential-slot flex shrink-0 items-center gap-1.5">
-        <button type="button" className="mobile-locale-toggle" aria-label={localeToggleTitle(locale)} onClick={() => setLocale(toggleLocale(locale))}>{getLocaleShortLabel(locale)}</button>
-        {children}
-      </div>
-    </div>
-  );
+  return <span className="sr-only">{activeLabel} · {apiBase || (locale === 'en-US' ? 'Same-origin Worker' : '同源 Worker')}</span>;
 }
 
 export function MobileNav({ activeMenu, setActiveMenu, locale }: { activeMenu: MenuKey; setActiveMenu: (menu: MenuKey) => void; locale: AppLocale }) {

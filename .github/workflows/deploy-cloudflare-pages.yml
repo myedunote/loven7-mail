@@ -85,6 +85,14 @@ jobs:
           VITE_API_BASE: ""
         run: npm run build
 
+      - name: Check webmail Pages Functions
+        if: env.DEPLOY_WEBMAIL == 'true'
+        working-directory: apps/webmail
+        run: |
+          npm run check:functions:headers
+          npm run check:functions:cors
+          npm run check:functions:image
+
       - name: Deploy webmail to Cloudflare Pages
         if: env.DEPLOY_WEBMAIL == 'true' && env.CLOUDFLARE_API_TOKEN != '' && env.CLOUDFLARE_ACCOUNT_ID != '' && env.WEBMAIL_PAGES_PROJECT_NAME != ''
         working-directory: apps/webmail
