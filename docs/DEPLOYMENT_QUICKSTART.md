@@ -8,6 +8,14 @@
 
 有一件事建议保留在浏览器里手动做：管理后台首次打开后的 Worker API 地址和管理员密码填写。它们会保存在当前浏览器本地缓存，不需要写进仓库、Prompt 或构建环境。
 
+## 一键部署按钮
+
+Cloudflare 官方 `Deploy to Cloudflare` 按钮目前只支持 Workers 应用，不支持 Pages 应用。本仓库推荐部署为两个 Cloudflare Pages 项目，所以现在不能放一个真正可用的官方一键按钮。
+
+如果把官方按钮直接指向这个仓库，它会进入 Workers 创建流程，而不是按 `apps/admin` 和 `apps/webmail` 创建两个 Pages 项目，部署结果不符合预期。
+
+当前最接近“一键部署”的方案是把下面的 Agent 指令交给有 Cloudflare / GitHub 操作能力的 Agent；手动部署则按本文的 Pages 控制台步骤完成。未来如果要做官方同款按钮，需要新增 Workers Static Assets 版本，并把用户站的 Pages Functions 路由迁移到 Worker 路由。
+
 ## 项目需要什么数据库
 
 没有 SQL 数据库，没有 D1、MySQL、Postgres，也没有迁移脚本。
