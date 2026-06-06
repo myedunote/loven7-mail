@@ -137,7 +137,7 @@ npm run build
 1. 在 `apps/admin/src/components/Shell.tsx` 的菜单类型和菜单列表中加入新项。
 2. 在 `apps/admin/src/App.tsx` 增加 lazy import。
 3. 在 `renderContent()` 中返回对应视图。
-4. 如果移动端需要左右滑切换，把菜单 key 加入 `mobileSwipeMenus`。
+4. 如果移动端底部主导航需要调整，同步修改 `components/Shell.tsx` 中的 `mobilePrimaryMenus`；左右滑顺序由 `mobileSwipeMenus` 基于这份主导航顺序派生。
 5. 写样式时优先复用现有按钮、胶囊、菜单、卡片样式，不要再单独硬写一套尺寸。
 
 ### API 请求层

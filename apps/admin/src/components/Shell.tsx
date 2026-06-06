@@ -1,4 +1,4 @@
-import React, { useEffect, useMemo, useRef, useState } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import { AlertCircle, BarChart2, Check, ChevronDown, Database, ExternalLink, Inbox, LayoutDashboard, Moon, MoreHorizontal, PenLine, RefreshCw, RotateCcw, Send, Settings, Shield, Sun, UserRoundCog, Users } from 'lucide-react';
 import { STORAGE_KEYS } from '../lib/constants';
 import { cls } from '../lib/format';
@@ -8,7 +8,9 @@ import { HeroOrbitLogo } from './BrandIcons';
 
 export type MenuKey = 'dashboard' | 'stats' | 'address' | 'users' | 'inbox' | 'sent' | 'unknown' | 'compose' | 'settings' | 'maintenance';
 
-const menuGroups: Array<Array<{ key: MenuKey; label: string; icon: React.ComponentType<{ size?: number | string; className?: string }> }>> = [
+type MenuItem = { key: MenuKey; label: string; icon: React.ComponentType<{ size?: number | string; className?: string }> };
+
+const menuGroups: Array<Array<MenuItem>> = [
   [
     { key: 'dashboard', label: '仪表盘', icon: LayoutDashboard },
     { key: 'stats', label: '统计', icon: BarChart2 },
@@ -28,6 +30,17 @@ const menuGroups: Array<Array<{ key: MenuKey; label: string; icon: React.Compone
 ];
 
 const flatMenuItems = menuGroups.flat();
+export const mobilePrimaryMenus: MenuKey[] = ['stats', 'address', 'inbox', 'sent'];
+export const mobileSwipeMenus: MenuKey[] = [...mobilePrimaryMenus, 'dashboard'];
+const mobilePrimaryMenuSet = new Set(mobilePrimaryMenus);
+const mobilePrimaryItems = mobilePrimaryMenus.map((key) => flatMenuItems.find((item) => item.key === key)!);
+const mobileMoreItems = flatMenuItems.filter((item) => !mobilePrimaryMenuSet.has(item.key));
+const mobileNavSlotCount = mobilePrimaryItems.length + 1;
+
+function getMobileNavSlotIndex(menu: MenuKey): number {
+  const primaryIndex = mobilePrimaryMenus.indexOf(menu);
+  return primaryIndex >= 0 ? primaryIndex : mobilePrimaryItems.length;
+}
 
 const adminAvatarPresets = [
   { id: 'aurora', src: 'https://img.loven7.com/file/img/IRup4u1h.webp', labelZh: '蓝发男工程师', labelEn: 'Blue male engineer' },
@@ -379,20 +392,36 @@ export function Header({ activeMenu, apiBase, locale }: {
 }) {
   const titleMap: Record<MenuKey, string> = { dashboard: '仪表盘', stats: '统计', address: '地址管理', users: '用户管理', inbox: '收件箱', sent: '发件箱', unknown: '未知邮件', compose: '写邮件', settings: '系统设置', maintenance: '维护' };
   const activeLabel = locale === 'en-US' ? menuLabelsEn[activeMenu] || titleMap[activeMenu] : titleMap[activeMenu];
-  return <span className="sr-only">{activeLabel} · {apiBase || (locale === 'en-US' ? 'Same-origin Worker' : '同源 Worker')}</span>;
+  return <span className="mobile-header sr-only">{activeLabel} · {apiBase || (locale === 'en-US' ? 'Same-origin Worker' : '同源 Worker')}</span>;
 }
 
-export function MobileNav({ activeMenu, setActiveMenu, locale }: { activeMenu: MenuKey; setActiveMenu: (menu: MenuKey) => void; locale: AppLocale }) {
+type MobileNavProps = {
+  activeMenu: MenuKey;
+  visualActiveMenu?: MenuKey;
+  setActiveMenu: (menu: MenuKey) => void;
+  locale: AppLocale;
+  swipeTargetMenu?: MenuKey | null;
+  swipeProgress?: number;
+  settling?: boolean;
+  settleMs?: number;
+};
+
+export function MobileNav({ activeMenu, visualActiveMenu, setActiveMenu, locale, swipeTargetMenu = null, swipeProgress = 0, settling = false, settleMs = 220 }: MobileNavProps) {
   const [moreOpen, setMoreOpen] = useState(false);
   const rootRef = useRef<HTMLElement | null>(null);
-  const primaryItems = useMemo<Array<{ key: MenuKey; label: string; icon: React.ComponentType<{ size?: number | string; className?: string }> }>>(() => [
-    { key: 'stats', label: '统计', icon: BarChart2 },
-    { key: 'address', label: '地址', icon: Users },
-    { key: 'inbox', label: '收件箱', icon: Inbox },
-    { key: 'sent', label: '发件箱', icon: Send },
-  ], []);
-  const moreItems = useMemo(() => flatMenuItems.filter((item) => !primaryItems.some((primary) => primary.key === item.key)), [primaryItems]);
-  const isMoreActive = moreOpen || !primaryItems.some((item) => item.key === activeMenu);
+  const displayMenu = visualActiveMenu || activeMenu;
+  const isMoreActive = moreOpen || !mobilePrimaryMenuSet.has(displayMenu);
+  const clampedProgress = Math.max(0, Math.min(1, Number.isFinite(swipeProgress) ? swipeProgress : 0));
+  const sourceIndex = getMobileNavSlotIndex(activeMenu);
+  const targetIndex = getMobileNavSlotIndex(swipeTargetMenu || displayMenu);
+  const settledIndex = getMobileNavSlotIndex(displayMenu);
+  const indicatorIndex = swipeTargetMenu ? sourceIndex + (targetIndex - sourceIndex) * clampedProgress : settledIndex;
+  const navStyle = {
+    '--mobile-nav-slot-count': String(mobileNavSlotCount),
+    '--mobile-nav-indicator-index': indicatorIndex.toFixed(4),
+    '--mobile-nav-swipe-progress': clampedProgress.toFixed(4),
+    '--mobile-nav-settle-ms': `${settleMs}ms`,
+  } as React.CSSProperties;
 
   useEffect(() => {
     if (!moreOpen) return undefined;
@@ -416,11 +445,17 @@ export function MobileNav({ activeMenu, setActiveMenu, locale }: { activeMenu: M
   };
 
   return (
-    <nav ref={rootRef} className="mobile-nav fixed bottom-0 left-0 right-0 z-[80] flex h-[calc(62px+env(safe-area-inset-bottom))] items-center justify-around border-t px-2 pb-safe md:hidden" aria-label={locale === 'en-US' ? 'Mobile navigation' : '移动端主导航'}>
-      {primaryItems.map((item) => {
+    <nav
+      ref={rootRef}
+      className={cls('mobile-nav fixed bottom-0 left-0 right-0 z-[80] flex h-[calc(62px+env(safe-area-inset-bottom))] items-center justify-around border-t px-2 pb-safe md:hidden', swipeTargetMenu && clampedProgress > 0.001 && 'mobile-nav-tracking', settling && 'mobile-nav-settling')}
+      style={navStyle}
+      aria-label={locale === 'en-US' ? 'Mobile navigation' : '移动端主导航'}
+    >
+      <span className="mobile-nav-progress-pill" aria-hidden="true" />
+      {mobilePrimaryItems.map((item) => {
         const Icon = item.icon;
-        const active = activeMenu === item.key;
-        return <button key={item.key} onClick={() => choose(item.key)} className={cls('mobile-nav-item flex w-14 flex-col items-center gap-0.5', active && 'active')}><Icon size={21} /><span className="text-[10px] font-medium">{menuLabel(item, locale)}</span></button>;
+        const active = displayMenu === item.key;
+        return <button key={item.key} onClick={() => choose(item.key)} className={cls('mobile-nav-item flex w-14 flex-col items-center gap-0.5', active && 'active')} aria-current={active ? 'page' : undefined}><Icon size={21} /><span className="text-[10px] font-medium">{menuLabel(item, locale)}</span></button>;
       })}
       <button type="button" onClick={() => setMoreOpen((current) => !current)} className={cls('mobile-nav-item flex w-14 flex-col items-center gap-0.5', isMoreActive && 'active')} aria-haspopup="menu" aria-expanded={moreOpen}>
         <MoreHorizontal size={21} />
@@ -428,7 +463,7 @@ export function MobileNav({ activeMenu, setActiveMenu, locale }: { activeMenu: M
       </button>
       {moreOpen && (
         <div className="mobile-more-menu" role="menu" aria-label={locale === 'en-US' ? 'More pages' : '更多页面'}>
-          {moreItems.map((item) => {
+          {mobileMoreItems.map((item) => {
             const Icon = item.icon;
             const active = activeMenu === item.key;
             return (
