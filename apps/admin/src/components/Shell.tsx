@@ -208,6 +208,7 @@ export function Sidebar({ activeMenu, setActiveMenu, stats, theme, setTheme, loc
   const profileInitial = getProfileInitial(apiBase);
   const profileCardRef = useRef<HTMLDivElement | null>(null);
   const [avatarPickerOpen, setAvatarPickerOpen] = useState(false);
+  const [avatarPopoverMounted, setAvatarPopoverMounted] = useState(false);
   const [avatarChoice, setAvatarChoice] = useState<AdminAvatarChoice>(() => readStoredAvatarChoice());
   const [customAvatar, setCustomAvatar] = useState(() => readStoredCustomAvatar());
   const [avatarUrlDraft, setAvatarUrlDraft] = useState(() => readStoredCustomAvatar());
@@ -219,6 +220,15 @@ export function Sidebar({ activeMenu, setActiveMenu, stats, theme, setTheme, loc
   const avatarSrc = isCustomAvatarActive ? customAvatar : selectedPreset.src;
   const defaultProfileName = locale === 'en-US' ? 'Admin' : '管理员';
   const displayProfileName = profileName || defaultProfileName;
+
+  useEffect(() => {
+    if (avatarPickerOpen) {
+      setAvatarPopoverMounted(true);
+      return undefined;
+    }
+    const timer = window.setTimeout(() => setAvatarPopoverMounted(false), 170);
+    return () => window.clearTimeout(timer);
+  }, [avatarPickerOpen]);
 
   useEffect(() => {
     if (!avatarPickerOpen) return undefined;
@@ -296,11 +306,11 @@ export function Sidebar({ activeMenu, setActiveMenu, stats, theme, setTheme, loc
             </span>
             <ChevronDown size={16} className="admin-profile-chevron ml-auto text-slate-400" />
           </button>
-          {avatarPickerOpen && (
-            <div className="admin-avatar-popover" role="dialog" aria-label={locale === 'en-US' ? 'Choose avatar' : '选择头像'}>
+          {avatarPopoverMounted && (
+            <div className={cls('admin-avatar-popover', !avatarPickerOpen && 'is-closing')} role="dialog" aria-label={locale === 'en-US' ? 'Choose avatar' : '选择头像'}>
               <div className="admin-avatar-popover-head">
                 <span>{locale === 'en-US' ? 'Avatar' : '头像'}</span>
-                <small>{locale === 'en-US' ? 'Presets or your own HTTPS image link' : '预设头像或自己的 HTTPS 图片链接'}</small>
+                <small>{locale === 'en-US' ? '5 presets + custom URL' : '5 个预设 + 自定义链接'}</small>
               </div>
               <label className="admin-profile-name-block" htmlFor="admin-profile-name">
                 <span>{locale === 'en-US' ? 'Display name' : '显示名称'}</span>
@@ -320,7 +330,7 @@ export function Sidebar({ activeMenu, setActiveMenu, stats, theme, setTheme, loc
                       }
                     }}
                   />
-                  <button type="button" className="admin-profile-name-apply" onClick={applyProfileName}><Check size={14} />{locale === 'en-US' ? 'Save' : '保存'}</button>
+                  <button type="button" className="admin-profile-name-apply" onClick={applyProfileName} title={locale === 'en-US' ? 'Save display name' : '保存显示名称'} aria-label={locale === 'en-US' ? 'Save display name' : '保存显示名称'}><Check size={14} /></button>
                 </span>
               </label>
               <div className="admin-avatar-grid">
@@ -357,7 +367,7 @@ export function Sidebar({ activeMenu, setActiveMenu, stats, theme, setTheme, loc
                       }
                     }}
                   />
-                  <button type="button" className="admin-avatar-url-apply" onClick={applyAvatarUrl}><Check size={14} />{locale === 'en-US' ? 'Apply' : '应用'}</button>
+                  <button type="button" className="admin-avatar-url-apply" onClick={applyAvatarUrl} title={locale === 'en-US' ? 'Apply custom avatar' : '应用自定义头像'} aria-label={locale === 'en-US' ? 'Apply custom avatar' : '应用自定义头像'}><Check size={14} /></button>
                 </span>
               </label>
               <div className="admin-avatar-actions">
