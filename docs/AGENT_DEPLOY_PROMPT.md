@@ -24,12 +24,28 @@ apps/webmail  用户邮箱站 / 分享站，包含 Cloudflare Pages Functions
 5. 生成或设置 `SHARE_ENCRYPTION_SECRET` 时，不要在最终回复里输出密钥原文。
 6. 如果管理后台和用户站是两个不同 origin，必须在用户站 Pages 项目设置 `SHARE_ADMIN_CORS_ORIGINS=<管理后台 origin>`，不要设置 `*`。
 
+## Agent 能自动完成什么
+
+可以自动完成：
+
+- 创建或复用两个 Cloudflare Pages 项目。
+- 创建或复用 Cloudflare KV Namespace，并把它绑定到用户站 Pages Functions，绑定名为 `SHARE_KV`。
+- 设置用户站运行时变量和 secret。
+- 配置 GitHub Actions 所需的 secrets / variables。
+- 触发部署并检查用户站 `/api/runtime`。
+
+建议让用户自己在浏览器里完成：
+
+- 管理后台首次打开后的 **连接设置**，包括 Worker API 地址、管理员密码和可选站点密码。
+
+这样可以避免把管理员凭据写进 Prompt、仓库、Actions 日志或前端构建产物。
+
 ## 最快部署 Prompt
 
 用户可以把下面一段话交给 Agent：
 
 ```text
-请帮我部署这个 GitHub 项目到我的 Cloudflare 账号：https://github.com/Lur1N77777/loven7-mail-cloudflare-suite 。这是基于 Cloudflare Temp Mail / cloudflare_temp_email 官方 Worker API 的增强前端套件，包含 apps/admin 管理后台和 apps/webmail 用户站/分享站。请创建两个 Cloudflare Pages 项目：管理后台使用 apps/admin，构建命令 npm ci && npm run build，输出目录 dist；用户站使用 apps/webmail，构建命令 npm ci && npm run build，输出目录 dist。不要让我在这段 Prompt 里填写任何 API、密码、Token 或密钥，也不要把这些信息写入仓库；管理后台部署完成后，我会在网页界面的“连接设置”里填写自己的 Worker API 地址和管理员密码。分享功能如果需要 KV 或运行时变量，请通过 Cloudflare 控制台/安全配置完成，并生成必要密钥，但不要在最终回复中泄露密钥原文；后台和用户站分开部署时，在用户站 Pages 里设置 SHARE_ADMIN_CORS_ORIGINS=<管理后台 origin>。部署完成后请返回管理后台 URL、用户站 URL，以及我下一步需要在界面里完成的配置。
+请帮我自动部署这个 GitHub 项目到我的 Cloudflare 账号：https://github.com/Lur1N77777/loven7-mail-cloudflare-suite 。我已经有 Cloudflare Temp Mail / cloudflare_temp_email 上游 Worker。请创建两个 Cloudflare Pages 项目：管理后台使用 apps/admin，构建命令 npm ci && npm run build，输出目录 dist；用户站使用 apps/webmail，构建命令 npm ci && npm run build，输出目录 dist。不要让我在公开 Prompt 里填写 Cloudflare Token、GitHub Token、管理员密码、站点密码、Worker API 地址或分享密钥；如需这些值，请通过安全输入、secrets、Cloudflare 登录或 MCP 流程收集，不要写进仓库、README、commit、Actions 日志或最终回复。用户站请配置 MAIL_WORKER_BASE_URL、可选 SITE_PASSWORD、生成并保存 SHARE_ENCRYPTION_SECRET，创建或复用 Cloudflare KV Namespace 并绑定为 SHARE_KV；管理后台和用户站分开部署时，在用户站设置 SHARE_ADMIN_CORS_ORIGINS=<管理后台 origin>。部署后请检查用户站 /api/runtime，并返回管理后台 URL、用户站 URL、部署结果，以及我下一步需要在管理后台网页里完成的配置。
 ```
 
 ## 部署管理后台 `apps/admin`
@@ -77,6 +93,8 @@ Cloudflare Pages 设置：
 
 如果用户暂时只想先打开前端，可以先部署站点，再引导用户在 Cloudflare Pages 的环境变量和 KV 绑定页面补齐分享配置。
 
+KV 是本项目唯一需要的数据库能力。不要创建 D1、R2、MySQL 或 Postgres；也没有迁移脚本。
+
 ## 本地构建验证
 
 部署前至少验证两个应用能构建：
@@ -106,6 +124,7 @@ node_modules/
 dist/
 .env.production
 .env.local
+.dev.vars
 .wrangler/
 ```
 

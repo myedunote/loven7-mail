@@ -69,6 +69,7 @@ const requiredFiles = [
   '.github/workflows/ci.yml',
   '.github/workflows/deploy-cloudflare-pages.yml',
   'scripts/check-cloudflare-runtime.mjs',
+  'docs/DEPLOYMENT_QUICKSTART.md',
   'docs/CLOUDFLARE_PAGES.md',
   'docs/GITHUB_ACTIONS.md',
   '.env.example',
@@ -116,6 +117,11 @@ if (exists('package.json')) {
   }
 }
 
+if (exists('.gitignore')) {
+  const gitignore = readText('.gitignore');
+  if (!gitignore.includes('.dev.vars')) warnings.push('.gitignore should ignore .dev.vars so local Cloudflare runtime secrets are not committed.');
+}
+
 if (exists('apps/admin/package.json')) {
   const adminPackage = readJson('apps/admin/package.json');
   const scripts = adminPackage.scripts || {};
@@ -145,6 +151,16 @@ if (exists('apps/webmail/scripts/deploy-pages.mjs')) {
   }
   if (!deployScript.includes('npx --yes wrangler@latest pages deploy')) {
     errors.push('deploy-pages.mjs should use npx --yes wrangler@latest pages deploy for consistent non-interactive Wrangler behavior.');
+  }
+}
+
+if (exists('apps/webmail/wrangler.toml')) {
+  const wranglerText = readText('apps/webmail/wrangler.toml');
+  const activeKvIds = [...wranglerText.matchAll(/^\s*(?:id|preview_id)\s*=\s*["']([^"']+)["']/gm)]
+    .map((match) => match[1])
+    .filter((value) => /^[a-f0-9]{32}$/i.test(value));
+  if (activeKvIds.length) {
+    errors.push('apps/webmail/wrangler.toml contains real-looking KV Namespace IDs. Replace them with placeholders or keep the KV block commented before publishing.');
   }
 }
 
@@ -197,7 +213,7 @@ for (const envFile of ['.env.example', 'apps/webmail/.dev.vars.example']) {
   }
 }
 
-for (const docFile of ['README.md', 'docs/CLOUDFLARE_PAGES.md', 'docs/GITHUB_ACTIONS.md', 'apps/webmail/README.md']) {
+for (const docFile of ['README.md', 'docs/DEPLOYMENT_QUICKSTART.md', 'docs/CLOUDFLARE_PAGES.md', 'docs/GITHUB_ACTIONS.md', 'apps/webmail/README.md']) {
   if (!exists(docFile)) continue;
   const text = readText(docFile);
   for (const snippet of ['SHARE_KV', 'SHARE_ENCRYPTION_SECRET', 'SHARE_ADMIN_CORS_ORIGINS', 'MAIL_WORKER_BASE_URL']) {

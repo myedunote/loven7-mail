@@ -3,6 +3,7 @@
 发布到 GitHub 前必须确认：
 
 - 不包含 `.env.production`、`.env.local`、私有 `.env`。
+- 不包含本地 `.dev.vars` 或其他 Cloudflare Pages 本地运行时变量文件。
 - 不包含 `dist/`、`node_modules/`、`.wrangler/`、本地缓存或截图。
 - 不包含个人 Worker API、个人域名、Cloudflare Token、管理员密码、站点密码、JWT。
 - `apps/webmail/wrangler.toml` 不能带真实 KV Namespace ID。

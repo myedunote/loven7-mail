@@ -9,6 +9,8 @@ apps/webmail  用户站 / 分享站，包含 Pages Functions
 
 建议在 Cloudflare Pages 创建两个独立项目，分别指向不同 Root directory。
 
+如果你只想看最短路径，先读 [DEPLOYMENT_QUICKSTART.md](DEPLOYMENT_QUICKSTART.md)。这份文档保留更多部署细节和排错说明。
+
 推荐项目名：
 
 | 站点 | Project name |
@@ -80,7 +82,15 @@ Binding name: SHARE_KV
 Type: KV Namespace
 ```
 
-`apps/webmail/wrangler.toml` 只作为本地参考。`npm --prefix apps/webmail run deploy` 默认会临时忽略它，避免本地配置覆盖 Cloudflare Pages 控制台里的 Functions 运行时变量和 KV 绑定。只有你明确想用本地 `wrangler.toml` 替换 Pages 项目绑定时，才设置 `WEBMAIL_USE_LOCAL_WRANGLER_CONFIG=1`。
+KV 是本项目唯一需要的数据库能力。它只保存分享链接和访客隐藏状态；不需要 D1、SQL、迁移脚本或表结构。
+
+`apps/webmail/wrangler.toml` 只作为本地参考，里面不能提交真实 KV Namespace ID。`npm --prefix apps/webmail run deploy` 默认会临时忽略它，避免本地配置覆盖 Cloudflare Pages 控制台里的 Functions 运行时变量和 KV 绑定。只有你明确想用本地 `wrangler.toml` 替换 Pages 项目绑定时，才设置 `WEBMAIL_USE_LOCAL_WRANGLER_CONFIG=1`，并在本地把示例 KV 配置改成自己的 ID。
+
+## Agent 自动部署可行性
+
+如果用户已经有上游 Cloudflare Temp Mail Worker，Agent 可以自动完成基础设施部署：创建 Pages、设置运行时变量、创建并绑定 KV、触发部署和检查 `/api/runtime`。
+
+仍然建议用户在管理后台网页里手动填写 Worker API 地址和管理员密码。这样管理员凭据只保存在当前浏览器本地，不会进入 Prompt、仓库、Actions 日志或构建产物。
 
 ## Preview 环境注意事项
 
