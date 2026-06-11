@@ -1,5 +1,5 @@
 import React, { useEffect, useRef, useState } from 'react';
-import { AlertCircle, BarChart2, Check, ChevronDown, Database, Inbox, LayoutDashboard, Moon, MoreHorizontal, PenLine, RefreshCw, RotateCcw, Send, Settings, Shield, Sun, UserRoundCog, Users } from 'lucide-react';
+import { AlertCircle, BarChart2, Check, ChevronDown, Database, Inbox, LayoutDashboard, Moon, MoreHorizontal, PenLine, RefreshCw, RotateCcw, Send, Settings, Sun, UserRoundCog, Users } from 'lucide-react';
 import { STORAGE_KEYS } from '../lib/constants';
 import { cls } from '../lib/format';
 import { getLocaleShortLabel, getRuntimeLocale, localeText, toggleLocale, type AppLocale } from '../lib/locale';
@@ -485,8 +485,3 @@ export function MobileNav({ activeMenu, visualActiveMenu, setActiveMenu, locale,
   );
 }
 
-
-export function CredentialButton({ onClick }: { onClick: () => void }) {
-  const locale = getRuntimeLocale();
-  return <button onClick={onClick} className="sidebar-mini-btn credential-button" aria-label={localeText('凭据设置', 'Credential settings', locale)}><Shield size={15} /><span className="credential-button-label">{localeText('凭据', 'Auth', locale)}</span></button>;
-}
