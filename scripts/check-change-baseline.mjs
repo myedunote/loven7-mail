@@ -55,6 +55,7 @@ const groupRules = [
       path === ".github/workflows/deploy-cloudflare-pages.yml" ||
       path === "scripts/check-cloudflare-pages-preflight.mjs" ||
       path === "scripts/check-change-baseline.mjs" ||
+      path === "apps/admin/wrangler.toml" ||
       [
         "docs/OPERATIONS_RUNBOOK.md",
         "docs/GITHUB_ACTIONS.md",
@@ -78,7 +79,6 @@ const groupRules = [
         "apps/admin/src/lib/api.ts",
         "apps/admin/src/App.tsx",
         "apps/admin/src/components/AuthPanel.tsx",
-        "apps/admin/wrangler.toml",
         "apps/admin/README.md",
       ].includes(path),
   },

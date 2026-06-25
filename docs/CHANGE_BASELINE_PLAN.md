@@ -48,6 +48,7 @@ git commit -m "update project"
 .gitattributes
 .gitignore
 .github/workflows/deploy-cloudflare-pages.yml
+apps/admin/wrangler.toml
 scripts/check-cloudflare-pages-preflight.mjs
 docs/OPERATIONS_RUNBOOK.md
 docs/GITHUB_ACTIONS.md
