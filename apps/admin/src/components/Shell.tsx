@@ -4,7 +4,7 @@ import { STORAGE_KEYS } from '../lib/constants';
 import { cls } from '../lib/format';
 import { getLocaleShortLabel, getRuntimeLocale, localeText, toggleLocale, type AppLocale } from '../lib/locale';
 import type { Statistics } from '../types/api';
-import { HeroOrbitLogo } from './BrandIcons';
+import { LovenMailMark } from './BrandIcons';
 
 export type MenuKey = 'dashboard' | 'stats' | 'address' | 'users' | 'inbox' | 'sent' | 'unknown' | 'compose' | 'settings' | 'maintenance';
 
@@ -32,15 +32,8 @@ const menuGroups: Array<Array<MenuItem>> = [
 const flatMenuItems = menuGroups.flat();
 export const mobilePrimaryMenus: MenuKey[] = ['stats', 'address', 'inbox', 'sent'];
 export const mobileSwipeMenus: MenuKey[] = [...mobilePrimaryMenus, 'dashboard'];
-const mobilePrimaryMenuSet = new Set(mobilePrimaryMenus);
-const mobilePrimaryItems = mobilePrimaryMenus.map((key) => flatMenuItems.find((item) => item.key === key)!);
-const mobileMoreItems = flatMenuItems.filter((item) => !mobilePrimaryMenuSet.has(item.key));
-const mobileNavSlotCount = mobilePrimaryItems.length + 1;
-
-function getMobileNavSlotIndex(menu: MenuKey): number {
-  const primaryIndex = mobilePrimaryMenus.indexOf(menu);
-  return primaryIndex >= 0 ? primaryIndex : mobilePrimaryItems.length;
-}
+const mobileMoreItems = flatMenuItems.filter((item) => !mobilePrimaryMenus.includes(item.key));
+const mobileNavSlotCount = mobilePrimaryMenus.length + 1;
 
 const adminAvatarPresets = [
   { id: 'aurora', src: 'https://img.loven7.com/file/img/IRup4u1h.webp', labelZh: '蓝发男工程师', labelEn: 'Blue male engineer' },
@@ -180,7 +173,7 @@ function getProfileInitial(apiBase?: string) {
 }
 
 function BrandGlyph({ className = 'h-7 w-7' }: { className?: string }) {
-  return <HeroOrbitLogo className={cls('logo-mark logo-sigil', className)} />;
+  return <LovenMailMark className={cls('logo-mark logo-sigil', className)} />;
 }
 
 export function Logo() {
@@ -191,7 +184,7 @@ export function Logo() {
   );
 }
 
-export function Sidebar({ activeMenu, setActiveMenu, stats, theme, setTheme, locale, setLocale, refresh, apiBase, connected, children }: {
+export function Sidebar({ activeMenu, setActiveMenu, stats, theme, setTheme, locale, setLocale, refresh, apiBase, connected, accountName, accountMeta, allowedMenus, showComposeButton = true, showSettingsShortcut = true, sidebarSubtitle, miniActionColumns, children }: {
   activeMenu: MenuKey;
   setActiveMenu: (menu: MenuKey) => void;
   stats: Statistics;
@@ -202,6 +195,13 @@ export function Sidebar({ activeMenu, setActiveMenu, stats, theme, setTheme, loc
   refresh: () => void;
   apiBase?: string;
   connected?: boolean;
+  accountName?: string;
+  accountMeta?: string;
+  allowedMenus?: MenuKey[];
+  showComposeButton?: boolean;
+  showSettingsShortcut?: boolean;
+  sidebarSubtitle?: string;
+  miniActionColumns?: 2 | 3;
   children?: React.ReactNode;
 }) {
   const hostLabel = getApiHostLabel(apiBase, locale);
@@ -219,7 +219,12 @@ export function Sidebar({ activeMenu, setActiveMenu, stats, theme, setTheme, loc
   const isCustomAvatarActive = avatarChoice === 'custom' && !!customAvatar;
   const avatarSrc = isCustomAvatarActive ? customAvatar : selectedPreset.src;
   const defaultProfileName = locale === 'en-US' ? 'Admin' : '管理员';
-  const displayProfileName = profileName || defaultProfileName;
+  const displayProfileName = accountName || profileName || defaultProfileName;
+  const displayProfileMeta = accountMeta || `${connected ? (locale === 'en-US' ? 'Connected' : '已连接') : (locale === 'en-US' ? 'Offline' : '未连接')} · ${hostLabel}`;
+  const allowedMenuSet = allowedMenus?.length ? new Set(allowedMenus) : null;
+  const visibleMenuGroups = allowedMenuSet
+    ? menuGroups.map((group) => group.filter((item) => allowedMenuSet.has(item.key))).filter((group) => group.length > 0)
+    : menuGroups;
 
   useEffect(() => {
     if (avatarPickerOpen) {
@@ -284,16 +289,24 @@ export function Sidebar({ activeMenu, setActiveMenu, stats, theme, setTheme, loc
 
   return (
     <aside className="hidden h-full w-[272px] shrink-0 flex-col border-r border-slate-100 bg-[#F8FAFC] md:flex xl:w-[288px]">
-      <div className="flex items-center gap-3 px-6 py-8"><Logo /><div><h1 className="brand-wordmark text-xl font-semibold text-slate-950">Loven7-Mail</h1><p className="text-xs text-slate-400">{locale === 'en-US' ? 'Cloudflare temp mail admin' : 'Cloudflare 临时邮箱后台'}</p></div></div>
+      <div className="sidebar-brand flex items-center gap-3 px-6 py-8">
+        <Logo />
+        <div className="sidebar-brand-copy" aria-label="Loven7 Mail">
+          <h1 className="brand-wordmark sidebar-brand-wordmark text-xl font-semibold text-slate-950">
+            <span>Loven7</span>
+            <span>Mail</span>
+          </h1>
+        </div>
+      </div>
       <div className="flex-1 space-y-5 overflow-y-auto px-4 py-2">
-        {menuGroups.map((group, groupIndex) => <div className="space-y-1" key={groupIndex}>{group.map((item) => {
+        {visibleMenuGroups.map((group, groupIndex) => <div className="space-y-1" key={groupIndex}>{group.map((item) => {
           const Icon = item.icon;
           const badge = item.key === 'inbox' ? stats.mailCount : item.key === 'sent' ? stats.sendMailCount : undefined;
           return <button key={item.key} onClick={() => setActiveMenu(item.key)} className={cls('sidebar-nav-item flex w-full items-center justify-between rounded-2xl px-4 py-3 text-left', activeMenu === item.key ? 'sidebar-nav-active' : 'text-slate-600 hover:bg-white hover:text-slate-900')}><span className="flex min-w-0 items-center gap-3"><Icon size={20} className="shrink-0" /> <span className="truncate">{menuLabel(item, locale)}</span></span><span className="sidebar-badge-slot">{typeof badge === 'number' && badge > 0 && <span className="sidebar-badge rounded-full px-2.5 py-0.5 text-xs font-medium">{badge}</span>}</span></button>;
         })}</div>)}
       </div>
       <div className="p-4">
-        <button onClick={() => setActiveMenu('compose')} className="sidebar-compose-btn mb-4 flex w-full items-center justify-center gap-2 rounded-2xl py-3.5 font-medium transition"><PenLine size={18} /> {locale === 'en-US' ? 'Compose' : '写邮件'}</button>
+        {showComposeButton ? <button onClick={() => setActiveMenu('compose')} className="sidebar-compose-btn mb-4 flex w-full items-center justify-center gap-2 rounded-2xl py-3.5 font-medium transition"><PenLine size={18} /> {locale === 'en-US' ? 'Compose' : '写邮件'}</button> : null}
         <div ref={profileCardRef} className="admin-profile-card rounded-2xl bg-white p-3 shadow-sm">
           <button type="button" className={cls('admin-profile-row flex items-center gap-3', avatarPickerOpen && 'is-open')} onClick={() => setAvatarPickerOpen((current) => !current)} aria-haspopup="dialog" aria-expanded={avatarPickerOpen}>
             <span className={cls('admin-profile-avatar flex h-10 w-10 items-center justify-center rounded-full font-semibold', !isCustomAvatarActive && 'admin-profile-avatar-preset')}>
@@ -302,7 +315,7 @@ export function Sidebar({ activeMenu, setActiveMenu, stats, theme, setTheme, loc
             </span>
             <span className="admin-profile-main min-w-0">
               <span className="admin-profile-name text-sm font-medium text-slate-800">{displayProfileName}</span>
-              <span className="admin-profile-status truncate text-[11px] text-slate-400">{connected ? (locale === 'en-US' ? 'Connected' : '已连接') : (locale === 'en-US' ? 'Offline' : '未连接')} · {hostLabel}</span>
+              <span className="admin-profile-status truncate text-[11px] text-slate-400">{displayProfileMeta}</span>
             </span>
             <ChevronDown size={16} className="admin-profile-chevron ml-auto text-slate-400" />
           </button>
@@ -376,9 +389,9 @@ export function Sidebar({ activeMenu, setActiveMenu, stats, theme, setTheme, loc
               {avatarNotice && <p className="admin-avatar-notice">{avatarNotice}</p>}
             </div>
           )}
-          <div className="mt-4 grid grid-cols-3 gap-2">
+          <div className={cls('mt-4 grid gap-2', miniActionColumns === 3 || showSettingsShortcut ? 'grid-cols-3' : 'grid-cols-2')}>
             <button onClick={refresh} className="sidebar-mini-btn" title={locale === 'en-US' ? 'Refresh' : '刷新'}><RefreshCw size={15} />{locale === 'en-US' ? 'Refresh' : '刷新'}</button>
-            <button onClick={() => setActiveMenu('settings')} className="sidebar-mini-btn" title={locale === 'en-US' ? 'Settings' : '系统设置'}><Settings size={15} />{locale === 'en-US' ? 'Settings' : '设置'}</button>
+            {showSettingsShortcut ? <button onClick={() => setActiveMenu('settings')} className="sidebar-mini-btn" title={locale === 'en-US' ? 'Settings' : '系统设置'}><Settings size={15} />{locale === 'en-US' ? 'Settings' : '设置'}</button> : null}
             {children}
           </div>
           <div className="theme-segmented-control mt-3"><button onClick={() => setTheme('light')} className={cls('theme-segmented-option', theme === 'light' ? 'active' : 'text-slate-500')}><Sun size={16} /> {locale === 'en-US' ? 'Light' : '浅色'}</button><button onClick={() => setTheme('dark')} className={cls('theme-segmented-option', theme === 'dark' ? 'active' : 'text-slate-500')}><Moon size={16} /> {locale === 'en-US' ? 'Dark' : '深色'}</button></div>
@@ -406,26 +419,42 @@ type MobileNavProps = {
   visualActiveMenu?: MenuKey;
   setActiveMenu: (menu: MenuKey) => void;
   locale: AppLocale;
+  allowedMenus?: MenuKey[];
   swipeTargetMenu?: MenuKey | null;
   swipeProgress?: number;
   settling?: boolean;
   settleMs?: number;
 };
 
-export function MobileNav({ activeMenu, visualActiveMenu, setActiveMenu, locale, swipeTargetMenu = null, swipeProgress = 0, settling = false, settleMs = 220 }: MobileNavProps) {
+export function MobileNav({ activeMenu, visualActiveMenu, setActiveMenu, locale, allowedMenus, swipeTargetMenu = null, swipeProgress = 0, settling = false, settleMs = 220 }: MobileNavProps) {
   const [moreOpen, setMoreOpen] = useState(false);
   const rootRef = useRef<HTMLElement | null>(null);
   const displayMenu = visualActiveMenu || activeMenu;
-  const isMoreActive = moreOpen || !mobilePrimaryMenuSet.has(displayMenu);
+  const allowedMenuSet = allowedMenus?.length ? new Set(allowedMenus) : null;
+  const navPrimaryMenus = allowedMenuSet ? mobilePrimaryMenus.filter((key) => allowedMenuSet.has(key)) : mobilePrimaryMenus;
+  const navPrimaryMenuSet = new Set(navPrimaryMenus);
+  const navPrimaryItems = navPrimaryMenus.map((key) => flatMenuItems.find((item) => item.key === key)!).filter(Boolean);
+  const navMoreItems = allowedMenuSet
+    ? flatMenuItems.filter((item) => allowedMenuSet.has(item.key) && !navPrimaryMenuSet.has(item.key))
+    : mobileMoreItems;
+  const navSlotCount = navPrimaryItems.length + (navMoreItems.length ? 1 : 0);
+  const getNavSlotIndex = (menu: MenuKey) => {
+    const primaryIndex = navPrimaryMenus.indexOf(menu);
+    return primaryIndex >= 0 ? primaryIndex : navPrimaryItems.length;
+  };
+  const isMoreActive = navMoreItems.length > 0 && (moreOpen || !navPrimaryMenuSet.has(displayMenu));
   const clampedProgress = Math.max(0, Math.min(1, Number.isFinite(swipeProgress) ? swipeProgress : 0));
-  const sourceIndex = getMobileNavSlotIndex(activeMenu);
-  const targetIndex = getMobileNavSlotIndex(swipeTargetMenu || displayMenu);
-  const settledIndex = getMobileNavSlotIndex(displayMenu);
+  const sourceIndex = getNavSlotIndex(activeMenu);
+  const targetIndex = getNavSlotIndex(swipeTargetMenu || displayMenu);
+  const settledIndex = getNavSlotIndex(displayMenu);
   const indicatorIndex = swipeTargetMenu ? sourceIndex + (targetIndex - sourceIndex) * clampedProgress : settledIndex;
+  const liveIndicatorIndex = swipeTargetMenu
+    ? `calc(${sourceIndex} + ${targetIndex - sourceIndex} * var(--mobile-nav-live-progress, ${clampedProgress.toFixed(4)}))`
+    : indicatorIndex.toFixed(4);
   const navStyle = {
-    '--mobile-nav-slot-count': String(mobileNavSlotCount),
-    '--mobile-nav-indicator-index': indicatorIndex.toFixed(4),
-    '--mobile-nav-swipe-progress': clampedProgress.toFixed(4),
+    '--mobile-nav-slot-count': String(navSlotCount || mobileNavSlotCount),
+    '--mobile-nav-indicator-index': liveIndicatorIndex,
+    '--mobile-nav-swipe-progress': swipeTargetMenu ? `var(--mobile-nav-live-progress, ${clampedProgress.toFixed(4)})` : clampedProgress.toFixed(4),
     '--mobile-nav-settle-ms': `${settleMs}ms`,
   } as React.CSSProperties;
 
@@ -453,23 +482,25 @@ export function MobileNav({ activeMenu, visualActiveMenu, setActiveMenu, locale,
   return (
     <nav
       ref={rootRef}
-      className={cls('mobile-nav fixed bottom-0 left-0 right-0 z-[80] flex h-[calc(62px+env(safe-area-inset-bottom))] items-center justify-around border-t px-2 pb-safe md:hidden', swipeTargetMenu && clampedProgress > 0.001 && 'mobile-nav-tracking', settling && 'mobile-nav-settling')}
+      className={cls('mobile-nav fixed bottom-0 left-0 right-0 z-[80] flex h-[calc(62px+env(safe-area-inset-bottom))] items-center justify-around border-t px-2 pb-safe md:hidden', swipeTargetMenu && 'mobile-nav-tracking', settling && 'mobile-nav-settling')}
       style={navStyle}
       aria-label={locale === 'en-US' ? 'Mobile navigation' : '移动端主导航'}
     >
       <span className="mobile-nav-progress-pill" aria-hidden="true" />
-      {mobilePrimaryItems.map((item) => {
+      {navPrimaryItems.map((item) => {
         const Icon = item.icon;
         const active = displayMenu === item.key;
         return <button key={item.key} onClick={() => choose(item.key)} className={cls('mobile-nav-item flex w-14 flex-col items-center gap-0.5', active && 'active')} aria-current={active ? 'page' : undefined}><Icon size={21} /><span className="text-[10px] font-medium">{menuLabel(item, locale)}</span></button>;
       })}
-      <button type="button" onClick={() => setMoreOpen((current) => !current)} className={cls('mobile-nav-item flex w-14 flex-col items-center gap-0.5', isMoreActive && 'active')} aria-haspopup="menu" aria-expanded={moreOpen}>
-        <MoreHorizontal size={21} />
-        <span className="text-[10px] font-medium">{locale === 'en-US' ? 'More' : '更多'}</span>
-      </button>
+      {navMoreItems.length > 0 && (
+        <button type="button" onClick={() => setMoreOpen((current) => !current)} className={cls('mobile-nav-item flex w-14 flex-col items-center gap-0.5', isMoreActive && 'active')} aria-haspopup="menu" aria-expanded={moreOpen}>
+          <MoreHorizontal size={21} />
+          <span className="text-[10px] font-medium">{locale === 'en-US' ? 'More' : '更多'}</span>
+        </button>
+      )}
       {moreOpen && (
         <div className="mobile-more-menu" role="menu" aria-label={locale === 'en-US' ? 'More pages' : '更多页面'}>
-          {mobileMoreItems.map((item) => {
+          {navMoreItems.map((item) => {
             const Icon = item.icon;
             const active = activeMenu === item.key;
             return (
