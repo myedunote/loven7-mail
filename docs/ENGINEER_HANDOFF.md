@@ -77,6 +77,7 @@ npm run build
 │  ├─ AGENT_DEPLOY_PROMPT.md
 │  ├─ CLOUDFLARE_PAGES.md
 │  ├─ GITHUB_ACTIONS.md
+│  ├─ PROJECT_STRUCTURE.md
 │  ├─ SECURITY_DESENSITIZATION.md
 │  └─ UPSTREAM.md
 ├─ scripts
@@ -93,6 +94,7 @@ npm run build
 | `.github/workflows/deploy-cloudflare-pages.yml` | GitHub Actions 自动部署 Cloudflare Pages | 改自动部署策略、项目名变量时改这里 |
 | `README.md` | 面向用户的项目介绍和部署教程 | 面向使用者的信息放这里 |
 | `docs/` | 面向部署、AI Agent、工程师的详细文档 | 面向维护者的信息放这里 |
+| `docs/PROJECT_STRUCTURE.md` | 目录边界、本地产物规则和新增文件放置建议 | 整理目录或新增模块前先看这里 |
 
 ## 管理后台 `apps/admin`
 

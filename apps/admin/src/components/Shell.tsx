@@ -219,12 +219,25 @@ export function Sidebar({ activeMenu, setActiveMenu, stats, theme, setTheme, loc
   const isCustomAvatarActive = avatarChoice === 'custom' && !!customAvatar;
   const avatarSrc = isCustomAvatarActive ? customAvatar : selectedPreset.src;
   const defaultProfileName = locale === 'en-US' ? 'Admin' : '管理员';
-  const displayProfileName = accountName || profileName || defaultProfileName;
-  const displayProfileMeta = accountMeta || `${connected ? (locale === 'en-US' ? 'Connected' : '已连接') : (locale === 'en-US' ? 'Offline' : '未连接')} · ${hostLabel}`;
+  const loginIdentity = accountName && accountMeta && accountMeta !== accountName
+    ? `${accountName} · ${accountMeta}`
+    : accountMeta || accountName || `${connected ? (locale === 'en-US' ? 'Connected' : '已连接') : (locale === 'en-US' ? 'Offline' : '未连接')} · ${hostLabel}`;
+  const displayProfileName = profileName || accountName || defaultProfileName;
+  const displayProfileMeta = loginIdentity;
   const allowedMenuSet = allowedMenus?.length ? new Set(allowedMenus) : null;
   const visibleMenuGroups = allowedMenuSet
     ? menuGroups.map((group) => group.filter((item) => allowedMenuSet.has(item.key))).filter((group) => group.length > 0)
     : menuGroups;
+  const sidebarMenuGroups = visibleMenuGroups
+    .map((group) => group.filter((item) => !(showComposeButton && item.key === 'compose')))
+    .filter((group) => group.length > 0);
+  const getMenuBadge = (key: MenuKey) => {
+    if (key === 'inbox') return stats.mailCount;
+    if (key === 'sent') return stats.sendMailCount;
+    if (key === 'address') return stats.addressCount;
+    if (key === 'users') return stats.userCount;
+    return undefined;
+  };
 
   useEffect(() => {
     if (avatarPickerOpen) {
@@ -288,36 +301,19 @@ export function Sidebar({ activeMenu, setActiveMenu, stats, theme, setTheme, loc
   };
 
   return (
-    <aside className="hidden h-full w-[272px] shrink-0 flex-col border-r border-slate-100 bg-[#F8FAFC] md:flex xl:w-[288px]">
-      <div className="sidebar-brand flex items-center gap-3 px-6 py-8">
-        <Logo />
-        <div className="sidebar-brand-copy" aria-label="Loven7 Mail">
-          <h1 className="brand-wordmark sidebar-brand-wordmark text-xl font-semibold text-slate-950">
-            <span>Loven7</span>
-            <span>Mail</span>
-          </h1>
-        </div>
-      </div>
-      <div className="flex-1 space-y-5 overflow-y-auto px-4 py-2">
-        {visibleMenuGroups.map((group, groupIndex) => <div className="space-y-1" key={groupIndex}>{group.map((item) => {
-          const Icon = item.icon;
-          const badge = item.key === 'inbox' ? stats.mailCount : item.key === 'sent' ? stats.sendMailCount : undefined;
-          return <button key={item.key} onClick={() => setActiveMenu(item.key)} className={cls('sidebar-nav-item flex w-full items-center justify-between rounded-2xl px-4 py-3 text-left', activeMenu === item.key ? 'sidebar-nav-active' : 'text-slate-600 hover:bg-white hover:text-slate-900')}><span className="flex min-w-0 items-center gap-3"><Icon size={20} className="shrink-0" /> <span className="truncate">{menuLabel(item, locale)}</span></span><span className="sidebar-badge-slot">{typeof badge === 'number' && badge > 0 && <span className="sidebar-badge rounded-full px-2.5 py-0.5 text-xs font-medium">{badge}</span>}</span></button>;
-        })}</div>)}
-      </div>
-      <div className="p-4">
-        {showComposeButton ? <button onClick={() => setActiveMenu('compose')} className="sidebar-compose-btn mb-4 flex w-full items-center justify-center gap-2 rounded-2xl py-3.5 font-medium transition"><PenLine size={18} /> {locale === 'en-US' ? 'Compose' : '写邮件'}</button> : null}
-        <div ref={profileCardRef} className="admin-profile-card rounded-2xl bg-white p-3 shadow-sm">
-          <button type="button" className={cls('admin-profile-row flex items-center gap-3', avatarPickerOpen && 'is-open')} onClick={() => setAvatarPickerOpen((current) => !current)} aria-haspopup="dialog" aria-expanded={avatarPickerOpen}>
-            <span className={cls('admin-profile-avatar flex h-10 w-10 items-center justify-center rounded-full font-semibold', !isCustomAvatarActive && 'admin-profile-avatar-preset')}>
+    <aside className="sidebar-reference-shell hidden h-full w-[272px] shrink-0 flex-col md:flex xl:w-[288px]">
+      <div className="sidebar-reference-panel">
+        <div ref={profileCardRef} className="admin-profile-card sidebar-profile-card">
+          <button type="button" className={cls('admin-profile-row sidebar-profile-row', avatarPickerOpen && 'is-open')} onClick={() => setAvatarPickerOpen((current) => !current)} aria-haspopup="dialog" aria-expanded={avatarPickerOpen}>
+            <span className={cls('admin-profile-avatar sidebar-profile-avatar', !isCustomAvatarActive && 'admin-profile-avatar-preset')}>
               <img src={avatarSrc} alt="" draggable={false} />
               <span className="sr-only">{profileInitial}</span>
             </span>
-            <span className="admin-profile-main min-w-0">
-              <span className="admin-profile-name text-sm font-medium text-slate-800">{displayProfileName}</span>
-              <span className="admin-profile-status truncate text-[11px] text-slate-400">{displayProfileMeta}</span>
+            <span className="admin-profile-main sidebar-profile-main">
+              <span className="admin-profile-name sidebar-profile-name">{displayProfileName}</span>
+              <span className="admin-profile-status sidebar-profile-status">{displayProfileMeta}</span>
             </span>
-            <ChevronDown size={16} className="admin-profile-chevron ml-auto text-slate-400" />
+            <ChevronDown size={15} className="admin-profile-chevron sidebar-profile-chevron" />
           </button>
           {avatarPopoverMounted && (
             <div className={cls('admin-avatar-popover', !avatarPickerOpen && 'is-closing')} role="dialog" aria-label={locale === 'en-US' ? 'Choose avatar' : '选择头像'}>
@@ -389,17 +385,38 @@ export function Sidebar({ activeMenu, setActiveMenu, stats, theme, setTheme, loc
               {avatarNotice && <p className="admin-avatar-notice">{avatarNotice}</p>}
             </div>
           )}
-          <div className={cls('mt-4 grid gap-2', miniActionColumns === 3 || showSettingsShortcut ? 'grid-cols-3' : 'grid-cols-2')}>
-            <button onClick={refresh} className="sidebar-mini-btn" title={locale === 'en-US' ? 'Refresh' : '刷新'}><RefreshCw size={15} />{locale === 'en-US' ? 'Refresh' : '刷新'}</button>
-            {showSettingsShortcut ? <button onClick={() => setActiveMenu('settings')} className="sidebar-mini-btn" title={locale === 'en-US' ? 'Settings' : '系统设置'}><Settings size={15} />{locale === 'en-US' ? 'Settings' : '设置'}</button> : null}
+        </div>
+
+        <nav className="sidebar-reference-nav" aria-label={locale === 'en-US' ? 'Admin navigation' : '后台导航'}>
+          {sidebarMenuGroups.map((group, groupIndex) => (
+            <div className="sidebar-nav-group" key={groupIndex}>
+              {group.map((item) => {
+                const Icon = item.icon;
+                const badge = getMenuBadge(item.key);
+                return (
+                  <button key={item.key} onClick={() => setActiveMenu(item.key)} className={cls('sidebar-nav-item', activeMenu === item.key && 'sidebar-nav-active')} aria-current={activeMenu === item.key ? 'page' : undefined}>
+                    <span className="sidebar-nav-main"><Icon size={18} className="sidebar-nav-icon" /> <span className="sidebar-nav-label">{menuLabel(item, locale)}</span></span>
+                    <span className="sidebar-badge-slot">{typeof badge === 'number' && badge > 0 && <span className="sidebar-badge">{badge}</span>}</span>
+                  </button>
+                );
+              })}
+            </div>
+          ))}
+        </nav>
+
+        <div className="sidebar-reference-footer">
+          <div className="sidebar-reference-tools">
+            <button onClick={refresh} className="sidebar-mini-btn sidebar-tool-btn" title={locale === 'en-US' ? 'Refresh' : '刷新'} aria-label={locale === 'en-US' ? 'Refresh' : '刷新'}><RefreshCw size={15} /><span>{locale === 'en-US' ? 'Refresh' : '刷新'}</span></button>
+            {showSettingsShortcut ? <button onClick={() => setActiveMenu('settings')} className="sidebar-mini-btn sidebar-tool-btn" title={locale === 'en-US' ? 'Settings' : '系统设置'} aria-label={locale === 'en-US' ? 'Settings' : '系统设置'}><Settings size={15} /><span>{locale === 'en-US' ? 'Settings' : '设置'}</span></button> : null}
             {children}
           </div>
-          <div className="theme-segmented-control mt-3"><button onClick={() => setTheme('light')} className={cls('theme-segmented-option', theme === 'light' ? 'active' : 'text-slate-500')}><Sun size={16} /> {locale === 'en-US' ? 'Light' : '浅色'}</button><button onClick={() => setTheme('dark')} className={cls('theme-segmented-option', theme === 'dark' ? 'active' : 'text-slate-500')}><Moon size={16} /> {locale === 'en-US' ? 'Dark' : '深色'}</button></div>
-          <button type="button" className="locale-mode-toggle mt-2 w-full" title={localeToggleTitle(locale)} onClick={() => setLocale(toggleLocale(locale))}>
+          <div className="theme-segmented-control sidebar-theme-control"><button onClick={() => setTheme('light')} className={cls('theme-segmented-option', theme === 'light' && 'active')} title={locale === 'en-US' ? 'Light mode' : '浅色模式'} aria-label={locale === 'en-US' ? 'Light mode' : '浅色模式'}><Sun size={15} /><span>{locale === 'en-US' ? 'Light' : '浅色'}</span></button><button onClick={() => setTheme('dark')} className={cls('theme-segmented-option', theme === 'dark' && 'active')} title={locale === 'en-US' ? 'Dark mode' : '深色模式'} aria-label={locale === 'en-US' ? 'Dark mode' : '深色模式'}><Moon size={15} /><span>{locale === 'en-US' ? 'Dark' : '深色'}</span></button></div>
+          <button type="button" className="locale-mode-toggle sidebar-locale-toggle" title={localeToggleTitle(locale)} onClick={() => setLocale(toggleLocale(locale))}>
             <span>{locale === 'en-US' ? 'Language' : '界面语言'}</span>
             <strong>{locale === 'en-US' ? 'English' : '中文'}</strong>
             <em>{getLocaleShortLabel(toggleLocale(locale))}</em>
           </button>
+          {showComposeButton ? <button onClick={() => setActiveMenu('compose')} className="sidebar-compose-btn"><PenLine size={17} /> <span>{locale === 'en-US' ? 'New email' : '写邮件'}</span></button> : null}
         </div>
       </div>
     </aside>
@@ -422,11 +439,12 @@ type MobileNavProps = {
   allowedMenus?: MenuKey[];
   swipeTargetMenu?: MenuKey | null;
   swipeProgress?: number;
+  useLiveProgress?: boolean;
   settling?: boolean;
   settleMs?: number;
 };
 
-export function MobileNav({ activeMenu, visualActiveMenu, setActiveMenu, locale, allowedMenus, swipeTargetMenu = null, swipeProgress = 0, settling = false, settleMs = 220 }: MobileNavProps) {
+export function MobileNav({ activeMenu, visualActiveMenu, setActiveMenu, locale, allowedMenus, swipeTargetMenu = null, swipeProgress = 0, useLiveProgress = false, settling = false, settleMs = 220 }: MobileNavProps) {
   const [moreOpen, setMoreOpen] = useState(false);
   const rootRef = useRef<HTMLElement | null>(null);
   const displayMenu = visualActiveMenu || activeMenu;
@@ -448,13 +466,14 @@ export function MobileNav({ activeMenu, visualActiveMenu, setActiveMenu, locale,
   const targetIndex = getNavSlotIndex(swipeTargetMenu || displayMenu);
   const settledIndex = getNavSlotIndex(displayMenu);
   const indicatorIndex = swipeTargetMenu ? sourceIndex + (targetIndex - sourceIndex) * clampedProgress : settledIndex;
-  const liveIndicatorIndex = swipeTargetMenu
+  const shouldUseLiveProgress = Boolean(swipeTargetMenu && useLiveProgress);
+  const liveIndicatorIndex = shouldUseLiveProgress
     ? `calc(${sourceIndex} + ${targetIndex - sourceIndex} * var(--mobile-nav-live-progress, ${clampedProgress.toFixed(4)}))`
     : indicatorIndex.toFixed(4);
   const navStyle = {
     '--mobile-nav-slot-count': String(navSlotCount || mobileNavSlotCount),
     '--mobile-nav-indicator-index': liveIndicatorIndex,
-    '--mobile-nav-swipe-progress': swipeTargetMenu ? `var(--mobile-nav-live-progress, ${clampedProgress.toFixed(4)})` : clampedProgress.toFixed(4),
+    '--mobile-nav-swipe-progress': shouldUseLiveProgress ? `var(--mobile-nav-live-progress, ${clampedProgress.toFixed(4)})` : clampedProgress.toFixed(4),
     '--mobile-nav-settle-ms': `${settleMs}ms`,
   } as React.CSSProperties;
 
@@ -490,7 +509,7 @@ export function MobileNav({ activeMenu, visualActiveMenu, setActiveMenu, locale,
       {navPrimaryItems.map((item) => {
         const Icon = item.icon;
         const active = displayMenu === item.key;
-        return <button key={item.key} onClick={() => choose(item.key)} className={cls('mobile-nav-item flex w-14 flex-col items-center gap-0.5', active && 'active')} aria-current={active ? 'page' : undefined}><Icon size={21} /><span className="text-[10px] font-medium">{menuLabel(item, locale)}</span></button>;
+        return <button key={item.key} type="button" data-menu={item.key} onClick={() => choose(item.key)} className={cls('mobile-nav-item flex w-14 flex-col items-center gap-0.5', active && 'active')} aria-current={active ? 'page' : undefined} aria-label={menuLabel(item, locale)}><Icon size={21} /><span className="text-[10px] font-medium">{menuLabel(item, locale)}</span></button>;
       })}
       {navMoreItems.length > 0 && (
         <button type="button" onClick={() => setMoreOpen((current) => !current)} className={cls('mobile-nav-item flex w-14 flex-col items-center gap-0.5', isMoreActive && 'active')} aria-haspopup="menu" aria-expanded={moreOpen}>
