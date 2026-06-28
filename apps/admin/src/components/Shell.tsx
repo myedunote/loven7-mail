@@ -395,7 +395,7 @@ export function Sidebar({ activeMenu, setActiveMenu, stats, theme, setTheme, loc
                 const Icon = item.icon;
                 const badge = getMenuBadge(item.key);
                 return (
-                  <button key={item.key} onClick={() => setActiveMenu(item.key)} className={cls('sidebar-nav-item', activeMenu === item.key && 'sidebar-nav-active')} aria-current={activeMenu === item.key ? 'page' : undefined}>
+                  <button type="button" key={item.key} onClick={() => setActiveMenu(item.key)} className={cls('sidebar-nav-item', activeMenu === item.key && 'sidebar-nav-active')} aria-current={activeMenu === item.key ? 'page' : undefined}>
                     <span className="sidebar-nav-main"><Icon size={18} className="sidebar-nav-icon" /> <span className="sidebar-nav-label">{menuLabel(item, locale)}</span></span>
                     <span className="sidebar-badge-slot">{typeof badge === 'number' && badge > 0 && <span className="sidebar-badge">{badge}</span>}</span>
                   </button>
@@ -407,21 +407,21 @@ export function Sidebar({ activeMenu, setActiveMenu, stats, theme, setTheme, loc
 
         <div className="sidebar-reference-footer">
           <div className="sidebar-reference-tools">
-            <button onClick={refresh} className="sidebar-mini-btn sidebar-tool-btn" title={locale === 'en-US' ? 'Refresh' : '刷新'} aria-label={locale === 'en-US' ? 'Refresh' : '刷新'}><RefreshCw size={15} /><span>{locale === 'en-US' ? 'Refresh' : '刷新'}</span></button>
-            {showSettingsShortcut ? <button onClick={() => setActiveMenu('settings')} className="sidebar-mini-btn sidebar-tool-btn" title={locale === 'en-US' ? 'Settings' : '系统设置'} aria-label={locale === 'en-US' ? 'Settings' : '系统设置'}><Settings size={15} /><span>{locale === 'en-US' ? 'Settings' : '设置'}</span></button> : null}
+            <button type="button" onClick={refresh} className="sidebar-mini-btn sidebar-tool-btn" title={locale === 'en-US' ? 'Refresh' : '刷新'} aria-label={locale === 'en-US' ? 'Refresh' : '刷新'}><RefreshCw size={15} /><span>{locale === 'en-US' ? 'Refresh' : '刷新'}</span></button>
+            {showSettingsShortcut ? <button type="button" onClick={() => setActiveMenu('settings')} className="sidebar-mini-btn sidebar-tool-btn" title={locale === 'en-US' ? 'Settings' : '系统设置'} aria-label={locale === 'en-US' ? 'Settings' : '系统设置'}><Settings size={15} /><span>{locale === 'en-US' ? 'Settings' : '设置'}</span></button> : null}
             <a className="sidebar-mini-btn sidebar-tool-btn sidebar-github-link" href={OFFICIAL_GITHUB_URL} target="_blank" rel="noreferrer" title={locale === 'en-US' ? 'Official GitHub repository' : '官方 GitHub 仓库'} aria-label={locale === 'en-US' ? 'Open official GitHub repository' : '打开官方 GitHub 仓库'}>
               <Github size={15} />
               <span>GitHub</span>
             </a>
             {children}
           </div>
-          <div className="theme-segmented-control sidebar-theme-control"><button onClick={() => setTheme('light')} className={cls('theme-segmented-option', theme === 'light' && 'active')} title={locale === 'en-US' ? 'Light mode' : '浅色模式'} aria-label={locale === 'en-US' ? 'Light mode' : '浅色模式'}><Sun size={15} /><span>{locale === 'en-US' ? 'Light' : '浅色'}</span></button><button onClick={() => setTheme('dark')} className={cls('theme-segmented-option', theme === 'dark' && 'active')} title={locale === 'en-US' ? 'Dark mode' : '深色模式'} aria-label={locale === 'en-US' ? 'Dark mode' : '深色模式'}><Moon size={15} /><span>{locale === 'en-US' ? 'Dark' : '深色'}</span></button></div>
+          <div className="theme-segmented-control sidebar-theme-control"><button type="button" onClick={() => setTheme('light')} className={cls('theme-segmented-option', theme === 'light' && 'active')} title={locale === 'en-US' ? 'Light mode' : '浅色模式'} aria-label={locale === 'en-US' ? 'Light mode' : '浅色模式'}><Sun size={15} /><span>{locale === 'en-US' ? 'Light' : '浅色'}</span></button><button type="button" onClick={() => setTheme('dark')} className={cls('theme-segmented-option', theme === 'dark' && 'active')} title={locale === 'en-US' ? 'Dark mode' : '深色模式'} aria-label={locale === 'en-US' ? 'Dark mode' : '深色模式'}><Moon size={15} /><span>{locale === 'en-US' ? 'Dark' : '深色'}</span></button></div>
           <button type="button" className="locale-mode-toggle sidebar-locale-toggle" title={localeToggleTitle(locale)} onClick={() => setLocale(toggleLocale(locale))}>
             <span>{locale === 'en-US' ? 'Language' : '界面语言'}</span>
             <strong>{locale === 'en-US' ? 'English' : '中文'}</strong>
             <em>{getLocaleShortLabel(toggleLocale(locale))}</em>
           </button>
-          {showComposeButton ? <button onClick={() => setActiveMenu('compose')} className="sidebar-compose-btn"><PenLine size={17} /> <span>{locale === 'en-US' ? 'New email' : '写邮件'}</span></button> : null}
+          {showComposeButton ? <button type="button" onClick={() => setActiveMenu('compose')} className="sidebar-compose-btn"><PenLine size={17} /> <span>{locale === 'en-US' ? 'New email' : '写邮件'}</span></button> : null}
         </div>
       </div>
     </aside>
